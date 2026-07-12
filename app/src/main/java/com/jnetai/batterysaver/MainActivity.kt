@@ -3,17 +3,10 @@ package com.jnetai.batterysaver
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
-import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 import com.jnetai.batterysaver.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
 
@@ -25,7 +18,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var uiUpdateJob: Job? = null
-    private var monitorFragment: MonitorFragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,8 +35,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        setupViewPager()
+        binding.btnToggleService.setOnClickListener {
+            toggleService()
+        }
+
+        binding.btnSettings.setOnClickListener {
+            SettingsBottomSheet().show(supportFragmentManager, "SettingsBottomSheet")
+        }
+
+        binding.btnAbout.setOnClickListener {
+            AboutBottomSheet().show(supportFragmentManager, "AboutBottomSheet")
+        }
+
         handleIntent(intent)
+        startUiUpdates()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -58,39 +62,71 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupViewPager() {
+    private fun toggleService() {
         try {
-            monitorFragment = MonitorFragment()
-            val fragments = listOf(
-                monitorFragment!!,
-                SettingsFragment(),
-                AboutFragment()
-            )
-
-            val tabTitles = listOf("Monitor", "Settings", "About")
-
-            binding.viewPager.adapter = ViewPagerAdapter(this, fragments)
-            binding.viewPager.offscreenPageLimit = 2
-
-            TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
-                tab.text = tabTitles[position]
-            }.attach()
-
-            binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(position: Int) {
-                    if (position == 0) {
-                        startUiUpdates()
-                    } else {
-                        stopUiUpdates()
-                    }
+            if (BatteryMonitorService.isServiceRunning) {
+                val intent = Intent(this, BatteryMonitorService::class.java).apply {
+                    action = BatteryMonitorService.ACTION_STOP
                 }
-            })
-
-            startUiUpdates()
+                startService(intent)
+                DebugLogger.logInfo("User stopped monitoring service")
+            } else {
+                val intent = Intent(this, BatteryMonitorService::class.java).apply {
+                    action = BatteryMonitorService.ACTION_START
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+                DebugLogger.logInfo("User started monitoring service")
+            }
+            updateUI()
         } catch (e: Exception) {
             DebugLogger.logError(
-                DebugLogger.ErrorCode.BS025,
-                "Failed to setup ViewPager",
+                DebugLogger.ErrorCode.BS010,
+                "Failed to toggle service",
+                e
+            )
+        }
+    }
+
+    fun updateUI() {
+        try {
+            val batteryInfo = BatteryInfoReader.read(this)
+            val prefs = getSharedPreferences("battery_saver_prefs", MODE_PRIVATE)
+
+            val isRunning = BatteryMonitorService.isServiceRunning
+            binding.tvServiceStatus.text = if (isRunning) "Service Running" else "Service Stopped"
+            binding.tvServiceStatus.setTextColor(
+                if (isRunning) getColor(android.R.color.holo_green_light)
+                else getColor(android.R.color.holo_red_light)
+            )
+
+            binding.btnToggleService.text = if (isRunning) "Stop Monitoring" else "Start Monitoring"
+
+            binding.tvBatteryLevel.text = "${batteryInfo.levelPercent}%"
+            binding.progressBattery.progress = batteryInfo.levelPercent
+
+            binding.tvTemperature.text = "${"%.1f".format(batteryInfo.temperatureCelsius)}°C"
+
+            binding.tvVoltage.text = "${"%.2f".format(batteryInfo.voltageVolts)}V"
+
+            binding.tvChargingStatus.text = when {
+                batteryInfo.isCharging -> "Charging (${batteryInfo.chargingType})"
+                else -> "Not Charging"
+            }
+
+            val batteryThreshold = prefs.getInt(BatteryMonitorService.PREF_BATTERY_THRESHOLD, 10)
+            val overheatThreshold = prefs.getInt(BatteryMonitorService.PREF_OVERHEAT_THRESHOLD, 45)
+
+            binding.tvLowBatteryThreshold.text = "${batteryThreshold}%"
+            binding.tvOverheatThreshold.text = "${overheatThreshold}°C"
+
+        } catch (e: Exception) {
+            DebugLogger.logError(
+                DebugLogger.ErrorCode.BS010,
+                "Failed to update UI",
                 e
             )
         }
@@ -101,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         uiUpdateJob = scope.launch {
             while (isActive) {
                 try {
-                    updateMonitorUI()
+                    updateUI()
                     delay(2000)
                 } catch (e: CancellationException) {
                     break
@@ -120,18 +156,6 @@ class MainActivity : AppCompatActivity() {
     fun stopUiUpdates() {
         uiUpdateJob?.cancel()
         uiUpdateJob = null
-    }
-
-    private fun updateMonitorUI() {
-        try {
-            monitorFragment?.updateUI()
-        } catch (e: Exception) {
-            DebugLogger.logError(
-                DebugLogger.ErrorCode.BS010,
-                "Failed to update monitor UI",
-                e
-            )
-        }
     }
 
     fun showAlertDialog() {
@@ -179,9 +203,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (binding.viewPager.currentItem == 0) {
-            startUiUpdates()
-        }
+        startUiUpdates()
     }
 
     override fun onPause() {
@@ -193,15 +215,5 @@ class MainActivity : AppCompatActivity() {
         stopUiUpdates()
         scope.cancel()
         super.onDestroy()
-    }
-
-    inner class ViewPagerAdapter(
-        activity: AppCompatActivity,
-        private val fragments: List<Fragment>
-    ) : FragmentStateAdapter(activity) {
-
-        override fun getItemCount(): Int = fragments.size
-
-        override fun createFragment(position: Int): Fragment = fragments[position]
     }
 }
