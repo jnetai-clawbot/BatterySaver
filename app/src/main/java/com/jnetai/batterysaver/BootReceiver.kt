@@ -29,7 +29,7 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 DebugLogger.logInfo("Auto-starting BatteryMonitorService after boot")
                 val serviceIntent = Intent(context, BatteryMonitorService::class.java).apply {
-                    action = BatteryMonitorService.ACTION_START
+                    this.action = BatteryMonitorService.ACTION_START
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(serviceIntent)

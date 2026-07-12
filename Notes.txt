@@ -1,15 +1,13 @@
 
 
-
-
-
 Ready to test. Push to 
 jnetai-clawbot/BatterySaver repo and set GitHub secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, GITHUB_TOKEN). The workflow builds on push to main and creates a release at 
 
+
+build this as a new release in 
+
 https://github.com/jnetai-clawbot/BatterySaver/releases
 
-
-
-
+lmk when done and ready to test!
 
 
