@@ -1,0 +1,108 @@
+# Battery Saver - Change Log
+
+## v1.0.0 - Initial Release
+
+### Project Overview
+Battery Saver is an Android app that monitors battery health in real-time. It alerts users with sound and vibration when:
+- Battery level drops below a user-configurable threshold (default 10%)
+- Battery temperature exceeds safe limits (default 45°C)
+- Unstable charging voltage or current is detected
+
+The app runs as a background foreground service and auto-starts on boot for continuous protection.
+
+### Location
+/home/jay/Documents/Scripts/AI/OpenCode/BatterySaver/
+
+### Files Created
+#### Build System
+- build.gradle.kts - Root Gradle build (AGP 8.7.3, Kotlin 2.1.0)
+- settings.gradle.kts - Project settings
+- gradle.properties - Gradle properties
+- app/build.gradle.kts - App module build config (minSdk 26, targetSdk 35)
+- app/proguard-rules.pro - ProGuard rules
+- .gitignore - Git ignore rules
+
+#### CI/CD
+- .github/workflows/build.yml - GitHub Actions workflow for building and releasing APK
+
+#### Android Resources
+- app/src/main/AndroidManifest.xml - App manifest with all permissions and components
+- app/src/main/res/values/strings.xml - String resources
+- app/src/main/res/values/colors.xml - Color definitions (dark theme)
+- app/src/main/res/values/themes.xml - Theme and style definitions
+- app/src/main/res/xml/file_paths.xml - FileProvider paths
+- app/src/main/res/layout/activity_main.xml - Main activity layout with tabs
+- app/src/main/res/layout/fragment_monitor.xml - Monitor tab layout
+- app/src/main/res/layout/fragment_settings.xml - Settings tab layout
+- app/src/main/res/layout/fragment_about.xml - About tab layout
+- app/src/main/res/drawable/ic_launcher_background.xml - Adaptive icon background
+- app/src/main/res/drawable/ic_launcher_foreground.xml - Adaptive icon foreground
+- app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml - Adaptive icon
+- app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml - Round adaptive icon
+- app/src/main/assets/alarm_default.ogg - Fallback alarm sound
+
+#### Kotlin Source Files
+- DebugLogger.kt - Centralized logging with error codes (BS001-BS999)
+- BatteryInfoReader.kt - Battery information data class and reader
+- AlertEngine.kt - Sound and vibration alert system with wake lock
+- BatteryMonitorService.kt - Foreground service for continuous monitoring
+- BootReceiver.kt - Auto-start on boot broadcast receiver
+- BatteryReceiver.kt - System battery broadcast receiver
+- MainActivity.kt - Main activity with ViewPager2 tabs
+- MonitorFragment.kt - Battery status monitor tab
+- SettingsFragment.kt - Settings tab with all toggles and sliders
+- AboutFragment.kt - About tab with version, update check, and share
+
+### Key Features Implemented
+1. Real-time battery monitoring (level, temperature, voltage, charging status)
+2. Configurable low battery alert threshold (1-30%, default 10%)
+3. Configurable overheat alert threshold (30-60°C, default 45°C)
+4. Unstable power detection (over/under voltage, battery health failures)
+5. Sound alarm with AUDIBILITY_ENFORCED flag (works even on mute)
+6. Vibration alerts
+7. Foreground service with persistent notification
+8. Auto-start on boot (configurable)
+9. Dark centered theme with Material Design
+10. About section with "Made by jnetai.com", version number, Check for Updates, Share App
+11. Three-tab interface: Monitor, Settings, About
+12. Alert dismiss via notification action or app dialog
+
+### Error Codes
+- BS001: Service start failed
+- BS002: Service stop failed
+- BS003: Alert engine error
+- BS004: Battery info read error
+- BS005: Settings load error
+- BS006: Settings save error
+- BS007: Notification error
+- BS008: Boot receiver error
+- BS009: Battery receiver error
+- BS010: UI update error
+- BS011: GitHub API error
+- BS012: Share intent error
+- BS013: Wake lock error
+- BS014: Vibration error
+- BS015: Audio playback error
+- BS016: Foreground service error
+- BS017: Permission error
+- BS018: Thread pool error
+- BS019: Battery intent parse error
+- BS020: Temperature parse error
+- BS021: Voltage parse error
+- BS022: Charging state error
+- BS023: Alert dialog error
+- BS024: Lifecycle error
+- BS025: ViewPager error
+- BS999: Unknown error
+
+### Build Instructions
+1. Push to main branch to trigger GitHub Actions build
+2. Workflow decodes keystore from secrets, builds release APK, creates GitHub release
+3. APK output: apk/Battery-Saver.apk
+4. Same keystore (ciphervault-release-keystore.jks) used for seamless updates
+
+### GitHub Release
+- Repository: jnetai-clawbot/BatterySaver
+- Release tag: v1.0.0
+- Release name: Battery Saver v1.0.0
+- APK: Battery-Saver.apk
